@@ -1,0 +1,1 @@
+void strcpy(char* dest, char* src, int length);

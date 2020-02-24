@@ -1,4 +1,5 @@
 #include "io.h"
+#include "string.h"
 
 /**
  * For the framebuffer,
@@ -32,7 +33,10 @@
 
 /* framebuffer mm io */
 char* fb = (char *) 0x000B8000;
-char* dataSpaceStart = (char*) 0x00300000;
+char* dataMarkStart = (char*) 0x00200000;
+char* dataMarkEnd = (char*) 0x010FF7FE;
+char* dataRealStart = (char*) 0x010FF7FF;
+char* dataRealEnd = (char*) 0x01FFEFFE;
 
 /**
  * display character c on the position i with color fg and bg.
@@ -74,7 +78,7 @@ void fb_write_string(int offset, char* s, int length)
     int i;
     for(i = 0; i < length; i = i + 1)
     {
-        fb_write_cell(offset + i*2, s[i], FB_GREEN, FB_DARK_GREY);
+        fb_write_cell(offset + i*2, s[i], FB_BLACK, FB_WHITE);
     }
 }
 
@@ -86,28 +90,75 @@ void fb_clear()
     }
 }
 
+int isMemAvailable(char* baseAddress, int size)
+{
+    for(char* c = baseAddress; c < (baseAddress+size); c++)
+    {
+        if(*c == 1)
+        {
+            return 0; //this base address won't work out
+        }
+    }
+    return 1; //this base address will work
+}
+
+void markMemory(char* baseAddress, int size)
+{
+    for(char* c = baseAddress; c < baseAddress + size; c++)
+    {
+        *c = 1;
+    }
+}
+
 char* getMem(int numBytes)
 {
-    //instead of returning the base address if everything, lets get specific
-    return dataSpaceStart;
+    //How much do I have to add to my found memory in first half to get 
+    //corresponding memory in second half.
+   int dataMapOffset = (int)dataRealStart - (int)dataMarkStart;
+   for(char* c = dataMarkStart; c <= dataMarkEnd; c++)
+   {
+       if(*c == 0)
+       {
+           if(isMemAvailable(c, numBytes))
+           {
+               markMemory(c, numBytes); //mark the memory as not available
+               return c + dataMapOffset;
+           }
+       }
+   }
+   return 0x0; //didn't find available memory
+}
+
+void freeMem(char* baseAddress, int numBytes)
+{
+    for(int i = 0; i < numBytes; i++)
+    {
+        *(baseAddress + i) = 0;
+    }
+}
+
+void unmarkAllMemory()
+{
+    for(char* c = dataMarkStart; c <= dataMarkEnd; c++)
+    {
+        *c = 0;
+    }
 }
 
 int main() 
 {
-    /* display the cursor in the second line */
-    //int cursorPos = 0x0050 * 10;
-    
-    //fb_move_cursor(0x0800);
-    char* s = getMem(5);//dataSpaceStart; //malloc 5 * sizeof(char) -> give me 5 bytes
-    s[0] = 'h';
-    *(s + 1) = 'e';
-    s[2] = 'l';
-    s[3] = 'l';
-    s[4] = 'o';
-    
-    fb_clear();
-    fb_write_string(80*2*5, s,5);
-   
+    //prepare OS for handing out mem
+    unmarkAllMemory();
 
+
+    char* s;
+    fb_clear();
+    for(int i = 0; i < 25; i++)
+    {
+        s = getMem(5);//dataSpaceStart; //malloc 5 * sizeof(char) -> give me 5 bytes
+        strcpy(s, "hello", 5);
+        fb_write_string(80*2*i, s,5);
+        freeMem(s, 5);
+    }
     return 0;
 }
