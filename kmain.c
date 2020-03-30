@@ -11,14 +11,15 @@ int main()
     unmarkAllMemory();
     segments_install_gdt();
 	interrupts_install_idt();
-    char* s;
+    //char* s;
+    
+    interrupt_prompt_string = getMem(4);
+    strcpy(interrupt_prompt_string, "V> ", 4);
+
+    interrupt_input = getMem(80*25-strlen(interrupt_prompt_string));
+    strcpy(interrupt_input, "\0", 1);
+
     fb_clear();
-    for(int i = 0; i < 25; i++)
-    {
-        s = getMem(5);//dataSpaceStart; //malloc 5 * sizeof(char) -> give me 5 bytes
-        strcpy(s, "hello", 5);
-        fb_write_string(80*2*i, s,5);
-        freeMem(s, 5);
-    }
+    fb_write_string(0, interrupt_prompt_string,strlen(interrupt_prompt_string));
     return 0;
 }

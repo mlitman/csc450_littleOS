@@ -9,6 +9,9 @@
 #define INTERRUPTS_DESCRIPTOR_COUNT 256 
 #define INTERRUPTS_KEYBOARD 33 
 
+char* interrupt_prompt_string;
+char* interrupt_input;
+
 struct IDT 
 {
 	unsigned short size;

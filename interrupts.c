@@ -1,4 +1,6 @@
 #include "interrupts.h"
+#include "mem_manager.h"
+#include "string.h"
 
 struct IDTDescriptor idt_descriptors[INTERRUPTS_DESCRIPTOR_COUNT];
 struct IDT idt;
@@ -41,8 +43,36 @@ void interrupt_handler(__attribute__((unused)) struct cpu_state cpu, unsigned in
 	unsigned char scan_code;
 	char ascii;
     scan_code = keyboard_read_scan_code();
-    fb_clear();
-    ascii = keyboard_scan_code_to_ascii(scan_code);
-    fb_write_cell(0, ascii, FB_BLACK, FB_WHITE);
+	if(scan_code == 0x0e) //a backspace
+	{
+		strshorten(interrupt_input, 1);
+		fb_clear();
+	fb_write_string(0, interrupt_prompt_string, strlen(interrupt_prompt_string));
+	fb_write_string(strlen(interrupt_prompt_string)*2, interrupt_input, strlen(interrupt_input));
+	}
+	else if(scan_code == 0x1c) //enter key
+	{
+		//char** theTokens;
+		strtok(interrupt_input);
+		//char* is a collecton of char (string)
+		//int* is a collection int (int array)
+		//char** is a collection of strings
+		//int** is a collection of int arrays
+
+		//strtok(theTokens, interrupt_input);
+	}
+	else
+	{
+		/* code */
+		ascii = keyboard_scan_code_to_ascii(scan_code);
+		char* temp = getMem(2);
+		
+		strcpy(temp, &ascii,1);
+		strcat(interrupt_input, temp);
+		freeMem(temp, strlen(temp));
+		fb_clear();
+	fb_write_string(0, interrupt_prompt_string, strlen(interrupt_prompt_string));
+	fb_write_string(strlen(interrupt_prompt_string)*2, interrupt_input, strlen(interrupt_input));
+	}
     pic_acknowledge(interrupt);
 }
